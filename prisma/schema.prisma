@@ -1,0 +1,117 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           String     @id @default(cuid())
+  username     String     @unique @db.VarChar(50)
+  passwordHash String     @db.VarChar(255)
+  fullName     String     @db.VarChar(100)
+  department   String?    @db.VarChar(50)
+  phone        String?    @db.VarChar(20)
+  role         UserRole   @default(USER)
+  status       UserStatus @default(PENDING)
+  failedLogins Int        @default(0)
+  lockedUntil  DateTime?
+  lastLoginAt  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  ordersAssigned Order[]    @relation("OrderAssignedUser")
+  ordersCreated  Order[]    @relation("OrderCreatedBy")
+  activities     Activity[]
+
+  @@index([role])
+  @@index([status])
+}
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  USER
+}
+
+enum UserStatus {
+  PENDING
+  ACTIVE
+  INACTIVE
+}
+
+model Order {
+  id          String   @id @default(cuid())
+  orderNumber String   @unique @db.VarChar(20)
+  clientName  String   @db.VarChar(100)
+  siteName    String?  @db.VarChar(200)
+  quantity    Int?
+  area        Decimal? @db.Decimal(10, 2)
+  frameType   String?  @db.VarChar(100)
+  productName String?  @db.VarChar(200)
+  noteDefect  String?  @db.Text
+  noteJoint   String?  @db.Text
+
+  orderReceivedDate     DateTime?
+  productionRequestDate DateTime?
+  deliveryRequestDate   DateTime?
+  productionDate        DateTime?
+  shipmentDate          DateTime?
+
+  status         OrderStatus @default(WAITING)
+  assignedUserId String?
+  assignedUser   User?       @relation("OrderAssignedUser", fields: [assignedUserId], references: [id])
+  createdById    String
+  createdBy      User        @relation("OrderCreatedBy", fields: [createdById], references: [id])
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  activities Activity[]
+
+  @@index([orderNumber])
+  @@index([clientName])
+  @@index([status])
+  @@index([deliveryRequestDate])
+  @@index([createdAt])
+}
+
+enum OrderStatus {
+  WAITING
+  PRODUCTION
+  PRODUCTION_DONE
+  SHIPPED
+  HOLD
+}
+
+model Activity {
+  id        String       @id @default(cuid())
+  orderId   String?
+  order     Order?       @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  userId    String?
+  user      User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    ActivityType
+  changes   Json?
+  reason    String?      @db.Text
+  ipAddress String?      @db.VarChar(45)
+  createdAt DateTime     @default(now())
+
+  @@index([orderId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+enum ActivityType {
+  ORDER_CREATED
+  ORDER_UPDATED
+  ORDER_DELETED
+  STATUS_CHANGED
+  PRODUCTION_STARTED
+  SHIPMENT_COMPLETED
+  USER_LOGIN
+  USER_LOGOUT
+  USER_CREATED
+  USER_UPDATED
+  USER_PERMISSION_CHANGED
+}
