@@ -1,3 +1,4 @@
+import type { ReactNode } from "react"
 import { notFound } from "next/navigation"
 import Link from "next/link"
 import { prisma } from "@/lib/prisma"
@@ -16,7 +17,7 @@ function fmt(val: Date | null | undefined) {
   return val ? format(val, "yyyy.MM.dd") : "-"
 }
 
-function Row({ label, value }: { label: string; value: React.ReactNode }) {
+function Row({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="flex gap-2 text-sm">
       <span className="w-28 shrink-0 text-gray-500">{label}</span>
