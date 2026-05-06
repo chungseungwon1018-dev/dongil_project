@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Dispatch, SetStateAction } from "react"
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { Button } from "@/components/ui/button"
@@ -220,7 +220,7 @@ function LotForm({
   form, setForm, onSave, onCancel, saving, label,
 }: {
   form: LotFormState
-  setForm: React.Dispatch<React.SetStateAction<LotFormState>>
+  setForm: Dispatch<SetStateAction<LotFormState>>
   onSave: () => void
   onCancel: () => void
   saving: boolean
