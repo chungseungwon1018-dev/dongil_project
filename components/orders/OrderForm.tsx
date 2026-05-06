@@ -253,7 +253,7 @@ export function OrderForm({ initialData, mode }: OrderFormProps) {
           </div>
           <div className="space-y-1">
             <Label>유리 종류</Label>
-            <Select value={form.glassType} onValueChange={(v) => set("glassType", v === "NONE" ? "" : v)}>
+            <Select value={form.glassType} onValueChange={(v: string | null) => set("glassType", !v || v === "NONE" ? "" : v)}>
               <SelectTrigger>
                 <SelectValue placeholder="선택" />
               </SelectTrigger>
