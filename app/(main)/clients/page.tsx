@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -22,6 +23,7 @@ function emptyForm() {
 }
 
 export default function ClientsPage() {
+  const router = useRouter()
   const [clients, setClients] = useState<Client[]>([])
   const [search, setSearch] = useState("")
   const [adding, setAdding] = useState(false)
@@ -153,7 +155,7 @@ export default function ClientsPage() {
                       </TableCell>
                     ) : (
                       <>
-                        <TableCell className="font-medium">{c.name}</TableCell>
+                        <TableCell className="font-medium cursor-pointer text-blue-600 hover:underline" onClick={() => router.push(`/clients/${c.id}`)}>{c.name}</TableCell>
                         <TableCell className="text-gray-500 text-sm">{c.shortCode || "-"}</TableCell>
                         <TableCell className="text-sm">{c.phone || "-"}</TableCell>
                         <TableCell className="text-sm text-gray-500 max-w-48 truncate">{c.memo || "-"}</TableCell>

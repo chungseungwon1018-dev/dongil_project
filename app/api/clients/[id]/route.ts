@@ -2,6 +2,27 @@ import { NextRequest } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getSession } from "@/lib/auth"
 
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const session = await getSession()
+  if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 })
+
+  const { id } = await params
+  const [client, orders] = await Promise.all([
+    prisma.client.findUnique({ where: { id } }),
+    (prisma.order.findMany as any)({
+      where: { clientId: id },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true, orderNumber: true, siteName: true, quantity: true,
+        area: true, glassType: true, status: true,
+        deliveryRequestDate: true, createdAt: true,
+      },
+    }),
+  ])
+  if (!client) return Response.json({ error: "거래처를 찾을 수 없습니다." }, { status: 404 })
+  return Response.json({ client, orders })
+}
+
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession()
   if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 })

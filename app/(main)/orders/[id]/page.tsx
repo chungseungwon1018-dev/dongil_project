@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ProductionShipmentActions } from "@/components/orders/ProductionShipmentActions"
 import { ProductionLots } from "@/components/orders/ProductionLots"
 import { format } from "date-fns"
-import { ArrowLeft, Pencil } from "lucide-react"
+import { ArrowLeft, Pencil, Printer } from "lucide-react"
 
 export const dynamic = "force-dynamic"
 
@@ -67,6 +67,9 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
             <Button variant="outline" size="sm"><Pencil className="h-4 w-4 mr-1" />수정</Button>
           </Link>
         )}
+        <Link href={`/orders/${id}/print`} target="_blank">
+          <Button variant="outline" size="sm"><Printer className="h-4 w-4 mr-1" />인쇄</Button>
+        </Link>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
