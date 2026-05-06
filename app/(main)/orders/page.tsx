@@ -1,3 +1,4 @@
+import { Suspense } from "react"
 import { prisma } from "@/lib/prisma"
 import { OrderDataTable } from "@/components/orders/OrderDataTable"
 
@@ -25,7 +26,9 @@ export default async function OrdersPage() {
   return (
     <div>
       <h2 className="text-lg font-semibold mb-4">발주 목록</h2>
-      <OrderDataTable initialData={serialized as any} />
+      <Suspense fallback={<div>목록 불러오는 중...</div>}>
+        <OrderDataTable initialData={serialized as any} />
+      </Suspense>
     </div>
   )
 }

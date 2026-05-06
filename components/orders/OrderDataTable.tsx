@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useCallback, useRef, useEffect } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useSearchParams, useRouter } from "next/navigation"
 import { toast } from "sonner"
 import {
   ColumnDef, SortingState, flexRender, getCoreRowModel,
@@ -44,13 +44,29 @@ function fmt(val: string | null | undefined) {
 
 export function OrderDataTable({ initialData }: Props) {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [data, setData] = useState<Order[]>(initialData)
   const [sorting, setSorting] = useState<SortingState>([])
+  const [searchInput, setSearchInput] = useState("")
   const [search, setSearch] = useState("")
-  const [statusFilter, setStatusFilter] = useState("ALL")
-  const [quickFilter, setQuickFilter] = useState("ALL")
+  const [statusFilter, setStatusFilter] = useState(searchParams?.get("status") || "ALL")
+  const [quickFilter, setQuickFilter] = useState(searchParams?.get("quickFilter") || "ALL")
 
-  async function deleteOrder(id: string, orderNumber: string) {
+  // 검색어 디바운스 (300ms) — 매 키 입력마다 재렌더 방지
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    setSearchInput(value)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => setSearch(value), 300)
+  }, [])
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
+  }, [])
+
+  const deleteOrder = useCallback(async (id: string, orderNumber: string) => {
     if (!confirm(`[${orderNumber}] 발주를 삭제하시겠습니까?`)) return
     const res = await fetch(`/api/orders/${id}`, { method: "DELETE" })
     const json = await res.json()
@@ -60,9 +76,10 @@ export function OrderDataTable({ initialData }: Props) {
     }
     toast.success("삭제되었습니다.")
     setData((prev) => prev.filter((o) => o.id !== id))
-  }
+  }, [])
 
-  const today = startOfDay(new Date())
+  // today를 메모이제이션하여 매 렌더마다 새 Date 객체 생성 방지
+  const today = useMemo(() => startOfDay(new Date()), [])
 
   const filtered = useMemo(() => {
     return data.filter((o) => {
@@ -71,7 +88,13 @@ export function OrderDataTable({ initialData }: Props) {
         o.orderNumber.includes(search) ||
         o.clientName.includes(search) ||
         (o.siteName || "").includes(search)
-      const matchStatus = statusFilter === "ALL" || o.status === statusFilter
+      const matchStatus = 
+        statusFilter === "ALL" 
+          ? true 
+          : statusFilter === "IN_PROGRESS"
+            ? !["SHIPPED", "HOLD"].includes(o.status)
+            : o.status === statusFilter
+            
       let matchQuick = true
       if (quickFilter === "THIS_WEEK") {
         matchQuick = !!o.deliveryRequestDate && isThisWeek(new Date(o.deliveryRequestDate), { weekStartsOn: 1 })
@@ -85,7 +108,8 @@ export function OrderDataTable({ initialData }: Props) {
     })
   }, [data, search, statusFilter, quickFilter, today])
 
-  const columns: ColumnDef<Order>[] = [
+  // columns를 메모이제이션하여 테이블 재초기화 방지
+  const columns: ColumnDef<Order>[] = useMemo(() => [
     {
       accessorKey: "orderNumber",
       header: "의뢰번호",
@@ -179,7 +203,7 @@ export function OrderDataTable({ initialData }: Props) {
         </div>
       ),
     },
-  ]
+  ], [router, deleteOrder, today])
 
   const table = useReactTable({
     data: filtered,
@@ -196,36 +220,46 @@ export function OrderDataTable({ initialData }: Props) {
   return (
     <div className="space-y-3">
       {/* 필터 */}
-      <div className="flex flex-wrap gap-2 items-center">
-        <Input
-          placeholder="의뢰번호, 업체명, 현장명 검색..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-64"
-        />
-        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v ?? "ALL")}>
-          <SelectTrigger className="w-32">
-            <SelectValue placeholder="전체 상태" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">전체</SelectItem>
-            <SelectItem value="WAITING">대기</SelectItem>
-            <SelectItem value="PRODUCTION">생산중</SelectItem>
-            <SelectItem value="PRODUCTION_DONE">생산완료</SelectItem>
-            <SelectItem value="SHIPPED">출고완료</SelectItem>
-            <SelectItem value="HOLD">보류</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={quickFilter} onValueChange={(v) => setQuickFilter(v ?? "ALL")}>
-          <SelectTrigger className="w-36">
-            <SelectValue placeholder="빠른 필터" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">전체</SelectItem>
-            <SelectItem value="THIS_WEEK">이번 주 납품</SelectItem>
-            <SelectItem value="DELAYED">지연 중인 발주</SelectItem>
-          </SelectContent>
-        </Select>
+      <div className="flex flex-wrap gap-3 items-end">
+        <div className="flex flex-col gap-1">
+          <span className="text-xs text-gray-500 font-medium">검색</span>
+          <Input
+            placeholder="의뢰번호, 업체명, 현장명 검색..."
+            value={searchInput}
+            onChange={handleSearchChange}
+            className="w-64"
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <span className="text-xs text-gray-500 font-medium">상태</span>
+          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v ?? "ALL")}>
+            <SelectTrigger className="w-32">
+              <SelectValue placeholder="전체 상태" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">전체</SelectItem>
+              <SelectItem value="IN_PROGRESS">진행중</SelectItem>
+              <SelectItem value="WAITING">대기</SelectItem>
+              <SelectItem value="PRODUCTION">생산중</SelectItem>
+              <SelectItem value="PRODUCTION_DONE">생산완료</SelectItem>
+              <SelectItem value="SHIPPED">출고완료</SelectItem>
+              <SelectItem value="HOLD">보류</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-col gap-1">
+          <span className="text-xs text-gray-500 font-medium">조건</span>
+          <Select value={quickFilter} onValueChange={(v) => setQuickFilter(v ?? "ALL")}>
+            <SelectTrigger className="w-36">
+              <SelectValue placeholder="빠른 필터" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">전체</SelectItem>
+              <SelectItem value="THIS_WEEK">이번 주 납품</SelectItem>
+              <SelectItem value="DELAYED">지연 중인 발주</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <span className="text-sm text-gray-500 ml-auto">{filtered.length}건</span>
         <Link href="/orders/new">
           <Button size="sm" className="gap-1">

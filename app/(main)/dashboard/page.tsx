@@ -57,18 +57,28 @@ export default async function DashboardPage() {
       {/* KPI 카드 */}
       <div className="grid grid-cols-4 gap-4">
         {[
-          { label: "진행 중인 발주", value: inProgress, color: "text-blue-600" },
-          { label: "이번 주 납품", value: thisWeek, color: "text-green-600" },
-          { label: "지연 건수", value: delayed, color: "text-red-600" },
-          { label: "완료율", value: `${completionRate}%`, color: "text-gray-700" },
-        ].map(({ label, value, color }) => (
-          <Card key={label}>
-            <CardContent className="pt-4">
-              <p className="text-xs text-gray-500">{label}</p>
-              <p className={`text-3xl font-bold mt-1 ${color}`}>{value}</p>
-            </CardContent>
-          </Card>
-        ))}
+          { label: "진행 중인 발주", value: inProgress, color: "text-blue-600", link: "/orders?status=IN_PROGRESS" },
+          { label: "이번 주 납품", value: thisWeek, color: "text-green-600", link: "/orders?quickFilter=THIS_WEEK" },
+          { label: "지연 건수", value: delayed, color: "text-red-600", link: "/orders?quickFilter=DELAYED" },
+          { label: "완료율", value: `${completionRate}%`, color: "text-gray-700", link: null },
+        ].map(({ label, value, color, link }) => {
+          const CardContentWrapper = (
+            <Card className={link ? "hover:bg-gray-50 transition-colors cursor-pointer" : ""}>
+              <CardContent className="pt-4">
+                <p className="text-xs text-gray-500">{label}</p>
+                <p className={`text-3xl font-bold mt-1 ${color}`}>{value}</p>
+              </CardContent>
+            </Card>
+          )
+          
+          return link ? (
+            <Link href={link} key={label}>
+              {CardContentWrapper}
+            </Link>
+          ) : (
+            <div key={label}>{CardContentWrapper}</div>
+          )
+        })}
       </div>
 
       {/* 상태 분포 */}
