@@ -1,14 +1,17 @@
 import { PrismaClient } from "./generated/prisma/client"
 import { PrismaPg } from "@prisma/adapter-pg"
+import pg from "pg"
 
-function createPrismaClient() {
-  const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! })
-  return new PrismaClient({ adapter })
+type GlobalForPrisma = { prisma: PrismaClient; pgPool: pg.Pool }
+const g = globalThis as unknown as GlobalForPrisma
+
+if (!g.pgPool) {
+  g.pgPool = new pg.Pool({ connectionString: process.env.DATABASE_URL!, max: 5 })
 }
 
-type ExtendedPrismaClient = ReturnType<typeof createPrismaClient>
-const globalForPrisma = globalThis as unknown as { prisma: ExtendedPrismaClient }
+if (!g.prisma) {
+  const adapter = new PrismaPg(g.pgPool)
+  g.prisma = new PrismaClient({ adapter })
+}
 
-export const prisma = globalForPrisma.prisma || createPrismaClient()
-
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma
+export const prisma = g.prisma

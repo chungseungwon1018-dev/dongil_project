@@ -34,6 +34,8 @@ interface Order {
   frameType: string | null
   glassType: string | null
   productName: string | null
+  orderReceivedDate: string | null
+  productionRequestDate: string | null
   deliveryRequestDate: string | null
   productionDate: string | null
   shipmentDate: string | null
@@ -144,34 +146,29 @@ export function OrderDataTable({ initialData }: Props) {
       cell: ({ row }) => row.original.productName || "-",
     },
     {
-      accessorKey: "orderReceivedDate",
-      header: "주문서도착",
-      cell: ({ row }) => fmt((row.original as any).orderReceivedDate),
-    },
-    {
-      accessorKey: "productionRequestDate",
-      header: "생산의뢰",
-      cell: ({ row }) => fmt((row.original as any).productionRequestDate),
-    },
-    {
-      accessorKey: "deliveryRequestDate",
-      header: "납품요청",
+      id: "schedule",
+      header: "일정",
       cell: ({ row }) => {
-        const date = row.original.deliveryRequestDate
-        if (!date) return "-"
-        const isDelayed = isBefore(new Date(date), today) && row.original.status !== "SHIPPED"
-        return <span className={isDelayed ? "text-red-600 font-medium" : ""}>{fmt(date)}</span>
+        const o = row.original
+        const isDelayed = o.deliveryRequestDate &&
+          isBefore(new Date(o.deliveryRequestDate), today) &&
+          o.status !== "SHIPPED"
+        return (
+          <div className="space-y-0.5 text-xs leading-tight">
+            <div className={`font-semibold ${isDelayed ? "text-red-600" : o.deliveryRequestDate ? "text-gray-800" : "text-gray-400"}`}>
+              납품 {fmt(o.deliveryRequestDate)}
+            </div>
+            <div className="flex gap-2 text-gray-500">
+              <span>생산 {fmt(o.productionDate)}</span>
+              {o.shipmentDate && <span className="text-green-600 font-medium">출고 {fmt(o.shipmentDate)}</span>}
+            </div>
+            <div className="flex gap-2 text-gray-400">
+              <span>주문서 {fmt(o.orderReceivedDate)}</span>
+              <span>의뢰 {fmt(o.productionRequestDate)}</span>
+            </div>
+          </div>
+        )
       },
-    },
-    {
-      accessorKey: "productionDate",
-      header: "생산",
-      cell: ({ row }) => fmt(row.original.productionDate),
-    },
-    {
-      accessorKey: "shipmentDate",
-      header: "출고",
-      cell: ({ row }) => fmt(row.original.shipmentDate),
     },
     {
       accessorKey: "status",
