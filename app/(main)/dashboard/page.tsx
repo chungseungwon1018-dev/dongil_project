@@ -57,17 +57,19 @@ export default async function DashboardPage() {
       {/* KPI 카드 */}
       <div className="grid grid-cols-4 gap-4">
         {[
-          { label: "진행 중인 발주", value: inProgress, color: "text-blue-600" },
-          { label: "이번 주 납품", value: thisWeek, color: "text-green-600" },
-          { label: "지연 건수", value: delayed, color: "text-red-600" },
-          { label: "완료율", value: `${completionRate}%`, color: "text-gray-700" },
-        ].map(({ label, value, color }) => (
-          <Card key={label}>
-            <CardContent className="pt-4">
-              <p className="text-xs text-gray-500">{label}</p>
-              <p className={`text-3xl font-bold mt-1 ${color}`}>{value}</p>
-            </CardContent>
-          </Card>
+          { label: "진행 중인 발주", value: inProgress, color: "text-blue-600", href: "/orders" },
+          { label: "이번 주 납품", value: thisWeek, color: "text-green-600", href: "/orders?quickFilter=THIS_WEEK" },
+          { label: "지연 건수", value: delayed, color: "text-red-600", href: "/orders?quickFilter=DELAYED" },
+          { label: "완료율", value: `${completionRate}%`, color: "text-gray-700", href: "/orders" },
+        ].map(({ label, value, color, href }) => (
+          <Link key={label} href={href}>
+            <Card className="cursor-pointer hover:shadow-md transition-shadow">
+              <CardContent className="pt-4">
+                <p className="text-xs text-gray-500">{label}</p>
+                <p className={`text-3xl font-bold mt-1 ${color}`}>{value}</p>
+              </CardContent>
+            </Card>
+          </Link>
         ))}
       </div>
 
@@ -125,7 +127,7 @@ export default async function DashboardPage() {
                   <span className="text-red-600 text-xs">
                     납품: {format(new Date(o.deliveryRequestDate!), "MM.dd")}
                   </span>
-                  <StatusBadge status={o.status as any} />
+                  <StatusBadge status={"DELAYED"} />
                 </li>
               ))}
             </ul>

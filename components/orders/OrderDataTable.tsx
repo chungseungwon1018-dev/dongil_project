@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { toast } from "sonner"
 import {
   ColumnDef, SortingState, flexRender, getCoreRowModel,
@@ -44,11 +44,12 @@ function fmt(val: string | null | undefined) {
 
 export function OrderDataTable({ initialData }: Props) {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [data, setData] = useState<Order[]>(initialData)
   const [sorting, setSorting] = useState<SortingState>([])
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState("ALL")
-  const [quickFilter, setQuickFilter] = useState("ALL")
+  const [quickFilter, setQuickFilter] = useState(searchParams.get("quickFilter") || "ALL")
 
   async function deleteOrder(id: string, orderNumber: string) {
     if (!confirm(`[${orderNumber}] 발주를 삭제하시겠습니까?`)) return
@@ -154,7 +155,14 @@ export function OrderDataTable({ initialData }: Props) {
     {
       accessorKey: "status",
       header: "상태",
-      cell: ({ row }) => <StatusBadge status={row.original.status} />,
+      cell: ({ row }) => {
+        const order = row.original
+        const isDelayed =
+          order.deliveryRequestDate &&
+          isBefore(new Date(order.deliveryRequestDate), today) &&
+          order.status !== "SHIPPED"
+        return <StatusBadge status={isDelayed ? "DELAYED" : order.status} />
+      },
     },
     {
       id: "actions",
