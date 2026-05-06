@@ -178,7 +178,14 @@ export function OrderDataTable({ initialData }: Props) {
     {
       accessorKey: "status",
       header: "상태",
-      cell: ({ row }) => <StatusBadge status={row.original.status} />,
+      cell: ({ row }) => {
+        const order = row.original
+        const isDelayed =
+          order.deliveryRequestDate &&
+          isBefore(new Date(order.deliveryRequestDate), today) &&
+          order.status !== "SHIPPED"
+        return <StatusBadge status={isDelayed ? "DELAYED" : order.status} />
+      },
     },
     {
       id: "actions",

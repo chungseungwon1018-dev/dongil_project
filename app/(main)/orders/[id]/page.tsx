@@ -29,6 +29,7 @@ const activityLabel: Record<string, string> = {
   ORDER_UPDATED: "발주 수정",
   ORDER_DELETED: "발주 삭제",
   STATUS_CHANGED: "상태 변경",
+  STATUS_REVERTED: "상태 되돌림",
   PRODUCTION_STARTED: "생산 시작",
   SHIPMENT_COMPLETED: "출고 완료",
 }
