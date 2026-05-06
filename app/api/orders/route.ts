@@ -2,10 +2,15 @@ import { NextRequest } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getSession } from "@/lib/auth"
 
-function generateOrderNumber(): string {
+async function generateOrderNumber(): Promise<string> {
   const yy = String(new Date().getFullYear()).slice(-2)
-  const rand = Math.floor(Math.random() * 10000).toString().padStart(4, "0")
-  return `${yy}-${rand}`
+  const last = await prisma.order.findFirst({
+    where: { orderNumber: { startsWith: `${yy}-` } },
+    orderBy: { orderNumber: "desc" },
+  })
+  if (!last) return `${yy}-0001`
+  const seq = parseInt(last.orderNumber.split("-")[1] ?? "0", 10)
+  return `${yy}-${String(seq + 1).padStart(4, "0")}`
 }
 
 export async function GET(req: NextRequest) {
@@ -59,25 +64,18 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
 
-    // 의뢰번호 중복 방지 루프
-    let orderNumber = body.orderNumber
-    if (!orderNumber) {
-      let tries = 0
-      do {
-        orderNumber = generateOrderNumber()
-        const exists = await prisma.order.findUnique({ where: { orderNumber } })
-        if (!exists) break
-      } while (++tries < 10)
-    }
+    const orderNumber = await generateOrderNumber()
 
     const order = await prisma.order.create({
       data: {
         orderNumber,
         clientName: body.clientName,
+        clientId: body.clientId || null,
         siteName: body.siteName || null,
         quantity: body.quantity ? Number(body.quantity) : null,
         area: body.area ? Number(body.area) : null,
         frameType: body.frameType || null,
+        glassType: body.glassType || null,
         productName: body.productName || null,
         noteDefect: body.noteDefect || null,
         noteJoint: body.noteJoint || null,

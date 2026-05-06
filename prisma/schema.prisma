@@ -42,17 +42,34 @@ enum UserStatus {
   INACTIVE
 }
 
+model Client {
+  id        String   @id @default(cuid())
+  name      String   @unique @db.VarChar(100)
+  shortCode String?  @db.VarChar(20)
+  phone     String?  @db.VarChar(20)
+  memo      String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orders Order[]
+
+  @@index([name])
+}
+
 model Order {
-  id          String   @id @default(cuid())
-  orderNumber String   @unique @db.VarChar(20)
-  clientName  String   @db.VarChar(100)
-  siteName    String?  @db.VarChar(200)
+  id          String    @id @default(cuid())
+  orderNumber String    @unique @db.VarChar(20)
+  clientName  String    @db.VarChar(100)
+  clientId    String?
+  client      Client?   @relation(fields: [clientId], references: [id])
+  siteName    String?   @db.VarChar(200)
   quantity    Int?
-  area        Decimal? @db.Decimal(10, 2)
-  frameType   String?  @db.VarChar(100)
-  productName String?  @db.VarChar(200)
-  noteDefect  String?  @db.Text
-  noteJoint   String?  @db.Text
+  area        Decimal?  @db.Decimal(10, 2)
+  frameType   String?   @db.VarChar(100)
+  glassType   GlassType?
+  productName String?   @db.VarChar(200)
+  noteDefect  String?   @db.Text
+  noteJoint   String?   @db.Text
 
   orderReceivedDate     DateTime?
   productionRequestDate DateTime?
@@ -68,10 +85,12 @@ model Order {
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
 
-  activities Activity[]
+  activities     Activity[]
+  productionLots ProductionLot[]
 
   @@index([orderNumber])
   @@index([clientName])
+  @@index([clientId])
   @@index([status])
   @@index([deliveryRequestDate])
   @@index([createdAt])
@@ -83,6 +102,29 @@ enum OrderStatus {
   PRODUCTION_DONE
   SHIPPED
   HOLD
+}
+
+enum GlassType {
+  TPS
+  LAMINATED
+  TRIPLE
+  SINGLE
+  OTHER
+}
+
+model ProductionLot {
+  id            String    @id @default(cuid())
+  orderId       String
+  order         Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  lotName       String    @db.VarChar(50)
+  quantity      Int?
+  scheduledDate DateTime?
+  completedDate DateTime?
+  note          String?   @db.Text
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([orderId])
 }
 
 model Activity {
@@ -110,6 +152,9 @@ enum ActivityType {
   STATUS_REVERTED
   PRODUCTION_STARTED
   SHIPMENT_COMPLETED
+  LOT_ADDED
+  LOT_UPDATED
+  LOT_DELETED
   USER_LOGIN
   USER_LOGOUT
   USER_CREATED

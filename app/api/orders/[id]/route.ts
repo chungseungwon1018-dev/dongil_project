@@ -42,10 +42,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     where: { id },
     data: {
       clientName: body.clientName ?? order.clientName,
+      clientId: body.clientId !== undefined ? (body.clientId || null) : order.clientId,
       siteName: body.siteName !== undefined ? (body.siteName || null) : order.siteName,
       quantity: body.quantity !== undefined ? (body.quantity ? Number(body.quantity) : null) : order.quantity,
       area: body.area !== undefined ? (body.area ? Number(body.area) : null) : order.area,
       frameType: body.frameType !== undefined ? (body.frameType || null) : order.frameType,
+      glassType: body.glassType !== undefined ? (body.glassType || null) : order.glassType,
       productName: body.productName !== undefined ? (body.productName || null) : order.productName,
       noteDefect: body.noteDefect !== undefined ? (body.noteDefect || null) : order.noteDefect,
       noteJoint: body.noteJoint !== undefined ? (body.noteJoint || null) : order.noteJoint,
