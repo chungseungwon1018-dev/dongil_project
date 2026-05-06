@@ -7,11 +7,15 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 })
 
   const { id } = await params
-  const lots = await prisma.productionLot.findMany({
-    where: { orderId: id },
-    orderBy: { createdAt: "asc" },
-  })
-  return Response.json(lots)
+  try {
+    const lots = await prisma.productionLot.findMany({
+      where: { orderId: id },
+      orderBy: { createdAt: "asc" },
+    })
+    return Response.json(lots)
+  } catch {
+    return Response.json([])
+  }
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

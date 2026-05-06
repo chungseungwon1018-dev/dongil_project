@@ -14,16 +14,15 @@ export async function GET(req: NextRequest) {
     ? { name: { contains: search } }
     : {}
 
-  const [data, total] = await Promise.all([
-    prisma.client.findMany({
-      where,
-      orderBy: { name: "asc" },
-      take: limit,
-    }),
-    prisma.client.count({ where }),
-  ])
-
-  return Response.json({ data, total })
+  try {
+    const [data, total] = await Promise.all([
+      prisma.client.findMany({ where, orderBy: { name: "asc" }, take: limit }),
+      prisma.client.count({ where }),
+    ])
+    return Response.json({ data, total })
+  } catch {
+    return Response.json({ data: [], total: 0 })
+  }
 }
 
 export async function POST(req: NextRequest) {
