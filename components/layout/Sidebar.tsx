@@ -3,11 +3,12 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { ClipboardList, LayoutDashboard, Users } from "lucide-react"
+import { ClipboardList, LayoutDashboard, Users, Building2 } from "lucide-react"
 
 const navItems = [
   { href: "/orders", label: "발주 목록", icon: ClipboardList },
   { href: "/dashboard", label: "대시보드", icon: LayoutDashboard },
+  { href: "/clients", label: "거래처 관리", icon: Building2 },
 ]
 
 const adminItems = [{ href: "/admin/users", label: "사용자 관리", icon: Users }]

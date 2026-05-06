@@ -6,6 +6,7 @@ import { StatusBadge } from "@/components/orders/StatusBadge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ProductionShipmentActions } from "@/components/orders/ProductionShipmentActions"
+import { ProductionLots } from "@/components/orders/ProductionLots"
 import { format } from "date-fns"
 import { ArrowLeft, Pencil } from "lucide-react"
 
@@ -80,8 +81,13 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           <CardHeader><CardTitle className="text-sm">사양 정보</CardTitle></CardHeader>
           <CardContent className="space-y-2">
             <Row label="수량" value={order.quantity} />
-            <Row label="면적" value={order.area?.toString()} />
+            <Row label="면적" value={order.area ? `${order.area} m²` : null} />
             <Row label="간봉" value={order.frameType} />
+            <Row label="유리종류" value={
+              order.glassType
+                ? ({ TPS: "TPS (이중복층)", LAMINATED: "접합", TRIPLE: "3복층", SINGLE: "단판", OTHER: "기타" }[order.glassType as string] ?? order.glassType)
+                : null
+            } />
             <Row label="품명" value={order.productName} />
           </CardContent>
         </Card>
@@ -118,6 +124,9 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
         status={order.status}
         role={session?.role ?? "USER"}
       />
+
+      {/* 생산 조 배치 */}
+      <ProductionLots orderId={id} role={session?.role ?? "USER"} />
 
       {/* 변경 이력 */}
       <Card>

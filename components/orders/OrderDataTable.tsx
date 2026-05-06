@@ -16,6 +16,14 @@ import { StatusBadge, type OrderStatus } from "./StatusBadge"
 import { format, isThisWeek, isBefore, startOfDay } from "date-fns"
 import { ChevronUp, ChevronDown, Plus } from "lucide-react"
 
+const GLASS_TYPE_LABELS: Record<string, string> = {
+  TPS: "TPS",
+  LAMINATED: "접합",
+  TRIPLE: "3복층",
+  SINGLE: "단판",
+  OTHER: "기타",
+}
+
 interface Order {
   id: string
   orderNumber: string
@@ -24,6 +32,7 @@ interface Order {
   quantity: number | null
   area: string | null
   frameType: string | null
+  glassType: string | null
   productName: string | null
   deliveryRequestDate: string | null
   productionDate: string | null
@@ -95,7 +104,11 @@ export function OrderDataTable({ initialData }: Props) {
         </Link>
       ),
     },
-    { accessorKey: "clientName", header: "업체명" },
+    {
+      accessorKey: "clientName",
+      header: "업체명",
+      cell: ({ row }) => row.original.clientName,
+    },
     {
       accessorKey: "siteName",
       header: "현장명",
@@ -110,6 +123,15 @@ export function OrderDataTable({ initialData }: Props) {
       accessorKey: "area",
       header: "면적",
       cell: ({ row }) => row.original.area ?? "-",
+    },
+    {
+      accessorKey: "glassType",
+      header: "유리종류",
+      cell: ({ row }) => {
+        const t = row.original.glassType
+        if (!t) return "-"
+        return <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-blue-50 text-blue-700">{GLASS_TYPE_LABELS[t] ?? t}</span>
+      },
     },
     {
       accessorKey: "frameType",

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -8,15 +8,32 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+
+const GLASS_TYPE_LABELS: Record<string, string> = {
+  TPS: "TPS (이중복층)",
+  LAMINATED: "접합",
+  TRIPLE: "3복층",
+  SINGLE: "단판",
+  OTHER: "기타",
+}
+
+interface Client {
+  id: string
+  name: string
+  shortCode: string | null
+}
 
 interface OrderData {
   id?: string
   orderNumber?: string
   clientName?: string
+  clientId?: string | null
   siteName?: string
   quantity?: number | null
   area?: string | number | null
   frameType?: string
+  glassType?: string | null
   productName?: string
   noteDefect?: string
   noteJoint?: string
@@ -35,22 +52,89 @@ function toDateInput(val: string | null | undefined): string {
   return val.split("T")[0]
 }
 
-function genOrderNumber() {
-  const yy = String(new Date().getFullYear()).slice(-2)
-  const rand = Math.floor(Math.random() * 10000).toString().padStart(4, "0")
-  return `${yy}-${rand}`
+function ClientCombobox({
+  value,
+  clientId,
+  clients,
+  onChange,
+}: {
+  value: string
+  clientId: string
+  clients: Client[]
+  onChange: (name: string, id: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState(value)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    setQuery(value)
+  }, [value])
+
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false)
+        if (!clientId) setQuery(value)
+      }
+    }
+    document.addEventListener("mousedown", onClickOutside)
+    return () => document.removeEventListener("mousedown", onClickOutside)
+  }, [clientId, value])
+
+  const filtered = query
+    ? clients.filter((c) => c.name.toLowerCase().includes(query.toLowerCase()))
+    : clients
+
+  return (
+    <div ref={ref} className="relative">
+      <Input
+        value={query}
+        onChange={(e) => {
+          setQuery(e.target.value)
+          onChange(e.target.value, "")
+          setOpen(true)
+        }}
+        onFocus={() => setOpen(true)}
+        placeholder="업체명 입력 또는 선택"
+        required
+      />
+      {open && filtered.length > 0 && (
+        <ul className="absolute z-50 w-full mt-1 bg-white border rounded-md shadow-lg max-h-48 overflow-y-auto text-sm">
+          {filtered.slice(0, 20).map((c) => (
+            <li
+              key={c.id}
+              className="px-3 py-2 hover:bg-blue-50 cursor-pointer flex items-center justify-between"
+              onMouseDown={(e) => {
+                e.preventDefault()
+                onChange(c.name, c.id)
+                setQuery(c.name)
+                setOpen(false)
+              }}
+            >
+              <span>{c.name}</span>
+              {c.shortCode && <span className="text-gray-400 text-xs">{c.shortCode}</span>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
 }
 
 export function OrderForm({ initialData, mode }: OrderFormProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const [clients, setClients] = useState<Client[]>([])
   const [form, setForm] = useState({
-    orderNumber: initialData?.orderNumber || genOrderNumber(),
+    orderNumber: initialData?.orderNumber || "",
     clientName: initialData?.clientName || "",
+    clientId: initialData?.clientId || "",
     siteName: initialData?.siteName || "",
     quantity: initialData?.quantity?.toString() || "",
     area: initialData?.area?.toString() || "",
     frameType: initialData?.frameType || "",
+    glassType: initialData?.glassType || "",
     productName: initialData?.productName || "",
     noteDefect: initialData?.noteDefect || "",
     noteJoint: initialData?.noteJoint || "",
@@ -58,6 +142,13 @@ export function OrderForm({ initialData, mode }: OrderFormProps) {
     productionRequestDate: toDateInput(initialData?.productionRequestDate),
     deliveryRequestDate: toDateInput(initialData?.deliveryRequestDate),
   })
+
+  useEffect(() => {
+    fetch("/api/clients?limit=200")
+      .then((r) => r.json())
+      .then((d) => setClients(d.data ?? []))
+      .catch(() => {})
+  }, [])
 
   function set(key: string, value: string) {
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -86,9 +177,16 @@ export function OrderForm({ initialData, mode }: OrderFormProps) {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...form,
+          clientName: form.clientName,
+          clientId: form.clientId || null,
+          siteName: form.siteName,
           quantity: form.quantity ? Number(form.quantity) : null,
           area: form.area ? form.area : null,
+          frameType: form.frameType,
+          glassType: form.glassType || null,
+          productName: form.productName,
+          noteDefect: form.noteDefect,
+          noteJoint: form.noteJoint,
           orderReceivedDate: form.orderReceivedDate || null,
           productionRequestDate: form.productionRequestDate || null,
           deliveryRequestDate: form.deliveryRequestDate || null,
@@ -116,11 +214,20 @@ export function OrderForm({ initialData, mode }: OrderFormProps) {
         <CardContent className="grid grid-cols-2 gap-4">
           <div className="space-y-1">
             <Label>의뢰번호</Label>
-            <Input value={form.orderNumber} readOnly className="bg-gray-50" />
+            <Input
+              value={form.orderNumber || (mode === "create" ? "저장 시 자동 부여" : "")}
+              readOnly
+              className="bg-gray-50 text-gray-400"
+            />
           </div>
           <div className="space-y-1">
             <Label>업체명 *</Label>
-            <Input value={form.clientName} onChange={(e) => set("clientName", e.target.value)} placeholder="업체명" required />
+            <ClientCombobox
+              value={form.clientName}
+              clientId={form.clientId}
+              clients={clients}
+              onChange={(name, id) => setForm((prev) => ({ ...prev, clientName: name, clientId: id }))}
+            />
           </div>
           <div className="col-span-2 space-y-1">
             <Label>현장명</Label>
@@ -137,7 +244,7 @@ export function OrderForm({ initialData, mode }: OrderFormProps) {
             <Input type="number" min="0" value={form.quantity} onChange={(e) => set("quantity", e.target.value)} placeholder="0" />
           </div>
           <div className="space-y-1">
-            <Label>면적</Label>
+            <Label>면적 (m²)</Label>
             <Input type="number" min="0" step="0.01" value={form.area} onChange={(e) => set("area", e.target.value)} placeholder="0.00" />
           </div>
           <div className="space-y-1">
@@ -145,8 +252,22 @@ export function OrderForm({ initialData, mode }: OrderFormProps) {
             <Input value={form.frameType} onChange={(e) => set("frameType", e.target.value)} placeholder="간봉" />
           </div>
           <div className="space-y-1">
-            <Label>품명</Label>
-            <Input value={form.productName} onChange={(e) => set("productName", e.target.value)} placeholder="품명" />
+            <Label>유리 종류</Label>
+            <Select value={form.glassType} onValueChange={(v) => set("glassType", v === "NONE" ? "" : v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="선택" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="NONE">-</SelectItem>
+                {Object.entries(GLASS_TYPE_LABELS).map(([val, label]) => (
+                  <SelectItem key={val} value={val}>{label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="col-span-4 space-y-1">
+            <Label>품명 / 규격</Label>
+            <Input value={form.productName} onChange={(e) => set("productName", e.target.value)} placeholder="품명 및 상세 규격" />
           </div>
         </CardContent>
       </Card>
